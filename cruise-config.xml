@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<cruise xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="cruise-config.xsd" schemaVersion="94">
+  <server artifactsdir="artifacts" agentAutoRegisterKey="e73034c6-ced8-41fc-bc0c-002724174103" webhookSecret="86a821dd-1d46-4301-8241-424cc6cafb38" commandRepositoryLocation="default" serverId="abd7eeb5-0ec3-4b1e-bbda-5d14729ff48c" />
+  <pipelines group="pipe-dream">
+    <pipeline name="pipe-dream-server">
+      <materials>
+        <git url="https://github.com/jpw/pipe-dream" />
+      </materials>
+      <stage name="configure-pipeline">
+        <jobs>
+          <job name="configure">
+            <tasks>
+              <exec command="/bin/bash">
+                <arg>-c</arg>
+                <arg>echo "JOB configure:" $SHELL $GO_PIPELINE_LABEL</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+            <resources>
+              <resource>configure</resource>
+              <resource>build</resource>
+            </resources>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="build">
+        <jobs>
+          <job name="build">
+            <tasks>
+              <exec command="/bin/bash">
+                <arg>-c</arg>
+                <arg>echo "JOB build: " $SHELL $GO_PIPELINE_LABEL</arg>
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="CDCs">
+        <jobs>
+          <job name="cdcs">
+            <tasks>
+              <exec command="/bin/bash">
+                <arg>-c</arg>
+                <arg>echo "JOB cdcs: " $SHELL $GO_PIPELINE_LABEL</arg>
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+      <stage name="deploy-to-live">
+        <approval type="manual" />
+        <jobs>
+          <job name="deploy-to-live">
+            <environmentvariables>
+              <variable name="CF_ORG">
+                <value>pcfdev-org</value>
+              </variable>
+              <variable name="CF_SPACE">
+                <value>pcfdev-space</value>
+              </variable>
+              <variable name="CF_API">
+                <value>https://api.local.pcfdev.io</value>
+              </variable>
+              <variable name="CF_USER" secure="true">
+                <encryptedValue>HVKyhz/uQLw=</encryptedValue>
+              </variable>
+              <variable name="CF_PASS" secure="true">
+                <encryptedValue>HVKyhz/uQLw=</encryptedValue>
+              </variable>
+            </environmentvariables>
+            <tasks>
+              <exec command="/bin/bash">
+                <arg>-c</arg>
+                <arg>echo "JOB deploy-to-live: " $SHELL $GO_PIPELINE_LABEL</arg>
+              </exec>
+              <exec command="cf">
+                <arg>--version</arg>
+                <runif status="passed" />
+              </exec>
+              <exec command="/bin/bash" workingdir="./pipe-dream-server/ops/deploy">
+                <arg>./deploy-to-live.sh</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+            <resources>
+              <resource>push</resource>
+            </resources>
+          </job>
+        </jobs>
+      </stage>
+    </pipeline>
+  </pipelines>
+  <pipelines group="defaultGroup" />
+  <agents>
+    <agent hostname="docker-agent-cf-cli " ipaddress="172.17.0.2" uuid="f0c07dc0-d18f-4654-8c30-887dd8beda3d">
+      <resources>
+        <resource>push</resource>
+      </resources>
+    </agent>
+    <agent hostname="docker-agent-docker-cli " ipaddress="172.17.0.3" uuid="99b8ba51-7c83-4e7c-8cde-d60d4f045a78">
+      <resources>
+        <resource>configure</resource>
+        <resource>build</resource>
+      </resources>
+    </agent>
+  </agents>
+</cruise>
+
